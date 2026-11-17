@@ -577,7 +577,7 @@ html,body{
 
 #receiptFileInput{display:none;}
 
-/* ── RECEIPT MODAL: mesmo padrão visual do Pix, adaptado para boleto ── */
+/* ── RECEIPT MODAL: mesmo padrão visual do boleto ── */
 .receipt-modal-overlay{
   position:absolute;inset:0;background:rgba(0,0,0,.55);
   z-index:1050;display:none;align-items:flex-end;justify-content:center;
@@ -1161,7 +1161,7 @@ html,body{
     </button>
   </footer>
 
-  <!-- RECEIPT MODAL: mesmo componente do Pix, adaptado para boleto -->
+  <!-- RECEIPT MODAL: mesmo componente do boleto -->
   <div class="receipt-modal-overlay" id="receiptModalOverlay" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle">
     <div class="receipt-modal">
       <div class="modal-handle"></div>
@@ -1586,7 +1586,7 @@ inputEl.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.pr
 sendBtnEl.addEventListener('mousedown', e => { if (inputEl.value.trim()) e.preventDefault(); });
 sendBtnEl.addEventListener('click', () => doSend());
 
-// ── FILE UPLOAD: padrão Pix adaptado para comprovante de boleto ──
+// ── FILE UPLOAD: padrão boleto para comprovante ──
 fileUploadBtn.addEventListener('click', (event) => {
   event.preventDefault();
   receiptModalOverlay.classList.add('on');
@@ -2259,7 +2259,7 @@ await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vend
 }
 
 async function getChatGPTResponse(userMessage, chatHistory, currentFlowStep) {
-  const valorPix = ORDER.productPrice.toFixed(2).replace('.', ',');
+  const valorBoleto = ORDER.productPrice.toFixed(2).replace('.', ',');
   const valorSemDesconto = (ORDER.productPrice * 1.46).toFixed(2).replace('.', ',');
   const localidade = ORDER.location || 'sua região';
     const prazoEntrega = ORDER.deliveryTime || '20-30 minutos';
@@ -2270,8 +2270,8 @@ async function getChatGPTResponse(userMessage, chatHistory, currentFlowStep) {
   
   // Mensagem para Cartão
   const msgCartao = isFimDeSemana 
-    ? "Aceitamos pagamentos com cartão e pix apenas de Segunda a Sexta, aos finais de semana aceitamos apenas boleto para maior segurança nas transações 😃"
-    : "Aceitamos pagamentos com cartão e pix apenas aos Sábados e Domingos, durante a semana apenas boleto para maior segurança nas transações 😃";
+    ? "Aceitamos pagamentos com cartão apenas de Segunda a Sexta, aos finais de semana aceitamos apenas boleto para maior segurança nas transações 😃"
+    : "Aceitamos pagamentos com cartão apenas aos Sábados e Domingos, durante a semana apenas boleto para maior segurança nas transações 😃";
 
   // Mensagem para Entrega
   const msgEntrega = isFimDeSemana
@@ -2302,7 +2302,7 @@ async function getChatGPTResponse(userMessage, chatHistory, currentFlowStep) {
 Você é o Mateus, atendente da Diskgas. 
 
 --- COMANDO CRÍTICO DE RESPOSTA ---
-1. Se a pergunta do cliente for sobre BOLETO, CARTÃO, MAQUININHA, PIX, CHAVE PIX, QR CODE ou PAGAR NA ENTREGA/DINHEIRO, você deve responder UNICAMENTE o texto da regra correspondente abaixo.
+1. Se a pergunta do cliente for sobre BOLETO, CARTÃO, MAQUININHA ou PAGAR NA ENTREGA/DINHEIRO, você deve responder UNICAMENTE o texto da regra correspondente abaixo.
 2. NUNCA junte o texto de pagamento com o prazo de entrega ou saudações extras se uma regra de pagamento for acionada.
 3. Responda EXATAMENTE o que está escrito, sem uma letra a mais.
 
@@ -2316,8 +2316,8 @@ Você é o Mateus, atendente da Diskgas.
 - REGRA_BOLETO: Se o cliente perguntar se aceita boleto, como pagar, onde está o boleto ou pedir o código do boleto:
    - Responda exatamente e apenas: Após pagar basta enviar o comprovante e o pedido será aprovado imediatamente, voce pode enviar o comprovante clicando no icone de presilha ao lado de onde escreve as mensagems 😄
 
-[ASSUNTO: CARTÃO / MAQUININHA / PIX / CHAVE PIX / QR CODE]
-- REGRA_PRECO_CARTAO: Se o cliente perguntar sobre cartão, maquininha, Pix, chave Pix ou QR Code:
+[ASSUNTO: CARTÃO / MAQUININHA]
+- REGRA_PRECO_CARTAO: Se o cliente perguntar sobre cartão ou maquininha:
    - Responda exatamente e apenas: ${msgCartao}
 
 [ASSUNTO: PAGAR NA ENTREGA / DINHEIRO]
@@ -2342,7 +2342,7 @@ Você é o Mateus, atendente da Diskgas.
 - PALAVRAS-CHAVE: "primeira compra", "conheço", "reputação", "seguro comprar", "confiança", "confiável"
 - Responda: ${hasSentConfiancaMsg1 ? msgConfianca2 : msgConfianca1}
 
---- REGRAS DE OURO (USAR APENAS SE NÃO FOR BOLETO/CARTÃO/PIX/ENTREGA OU RECEIO) ---
+--- REGRAS DE OURO (USAR APENAS SE NÃO FOR BOLETO/CARTÃO/ENTREGA OU RECEIO) ---
 - PRAZO: Se o cliente perguntar o prazo de entrega isoladamente, responda: "O prazo de entrega é de ${prazoEntrega} após o pagamento. 😄"
 - PAGAMENTO: Nunca confirme que o boleto foi pago, o pedido foi finalizado ou qualquer tipo de confirmação. Se o cliente disser que pagou ou enviar algum comprovante responda: "Com o pagamento realizado podemos preparar o envio, o prazo de entrega é de ${prazoEntrega} após o pagamento. 😄"
 HISTÓRICO DE CONVERSA:
@@ -2378,10 +2378,10 @@ PASSO ATUAL: ${currentFlowStep}
     // Verifica se a mensagem contém pelo menos uma palavra de CADA grupo
     const temA = grupoA.some(k => fuzzyMatch(msgAnalise, k));
     const temB = grupoB.some(k => fuzzyMatch(msgAnalise, k));
-    const mencionaPixOuCartao = ["pix", "chave pix", "qr code", "qrcode", "cartão", "cartao", "maquininha"].some(k => msgAnalise.includes(k));
+    const mencionaCartao = ["cartão", "cartao", "maquininha"].some(k => msgAnalise.includes(k));
 
-    // Só reexibe o boleto se houver a combinação (A + B), sem confundir PIX ou cartão com o método principal
-    if (window._currentBoletoLine && !mencionaPixOuCartao && temA && temB) return 'BOLETO_PROBLEM';
+    // Só reexibe o boleto se houver a combinação (A + B), sem confundir cartão com o método principal
+    if (window._currentBoletoLine && !mencionaCartao && temA && temB) return 'BOLETO_PROBLEM';
 
     
     return data.reply;
@@ -2418,7 +2418,7 @@ async function doSend() {
 
 
           const mensagemMinuscula = originalText.toLowerCase();
-  const mencionaPixOuCartao = ["pix", "chave pix", "qr code", "qrcode", "cartão", "cartao", "maquininha"].some(termo => mensagemMinuscula.includes(termo));
+  const mencionaCartao = ["cartão", "cartao", "maquininha"].some(termo => mensagemMinuscula.includes(termo));
 
   // FILTRO: Bloqueio de contatos externos (Telefone, WhatsApp, etc)
   const termosBloqueados = ["telefone", "whatsapp", "contato", "zap", "ligo", "ligar", "ligação", "ligacao", "falar", "whatss", "ligar", "fone", "wpp", "chama", "call"];
@@ -2451,7 +2451,7 @@ const set2 = ["confiança", "segurança", "medo", "dúvida", "receio", "risco", 
   const temSet1 = set1.some(word => mensagemMinuscula.includes(word));
   const temSet2 = set2.some(word => mensagemMinuscula.includes(word));
 
-  if (temSet1 && temSet2 && !mencionaPixOuCartao) {
+  if (temSet1 && temSet2 && !mencionaCartao) {
     setTyping(true);
     await pause(1500);
     setTyping(false);
