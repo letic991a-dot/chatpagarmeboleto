@@ -1311,7 +1311,7 @@ const RECEIPT_REMINDER_SCHEDULE = [
     key: 'receiptReminder1',
     flag: '_receiptReminder1Sent',
     delay: 40 * 1000,
-    message: (saudacao) => `${saudacao}após pagar peço que envie o comprovante para agilizarmos a entrega. 😃`
+    message: (saudacao) => `${saudacao}após o pagamento peço que envie o comprovante para agilizarmos sua entrega. 😃`
   },
   {
     key: 'receiptReminder2',
@@ -1323,7 +1323,7 @@ const RECEIPT_REMINDER_SCHEDULE = [
     key: 'receiptReminder3',
     flag: '_receiptReminder3Sent',
     delay: 120 * 1000,
-    message: (saudacao) => `${saudacao}estou aguardando o comprovante de pagamento para prosseguir com a entrega do seu gás. 😃`
+    message: (saudacao) => `${saudacao}estou aguardando o comprovante de pagamento para realizarmos a entrega do seu gás. 😃`
   }
 ];
 window._receiptReminderTimers = {};
@@ -2347,6 +2347,7 @@ await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vend
 
     const elapsed = Date.now() - boletoStartTime;
     console.info(`Boleto gerado em ${elapsed} ms`);
+    await pause(1800);
     sp.remove();
     addSys('Boleto gerado com sucesso', 'ok');
     sendTranscript();
