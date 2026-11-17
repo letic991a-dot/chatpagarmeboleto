@@ -1304,6 +1304,33 @@ let unread = 0;
 let chatUnlocked = false;
 let alertTimeout = null;
 
+// ── LEMBRETES DE COMPROVANTE DO BOLETO ─────────────────
+// Os horários são calculados a partir do momento em que o boleto foi exibido.
+const RECEIPT_REMINDER_SCHEDULE = [
+  {
+    key: 'receiptReminder1',
+    flag: '_receiptReminder1Sent',
+    delay: 40 * 1000,
+    message: (saudacao) => `${saudacao}Após o pagamento, envie o comprovante para agilizar sua entrega. 😃`
+  },
+  {
+    key: 'receiptReminder2',
+    flag: '_receiptReminder2Sent',
+    delay: 90 * 1000,
+    message: (saudacao) => `${saudacao}Assim que você enviar o comprovante do boleto, o pedido poderá seguir para conferência. Estou no aguardo! 😃`
+  },
+  {
+    key: 'receiptReminder3',
+    flag: '_receiptReminder3Sent',
+    delay: 120 * 1000,
+    message: (saudacao) => `${saudacao}Estou aguardando o comprovante do boleto para dar continuidade ao pedido. 😃`
+  }
+];
+window._receiptReminderTimers = {};
+window._receiptReminderInFlight = {};
+window._boletoGeneratedAt = null;
+window._receiptUploaded = false;
+
 // ── SOCKET.IO INTEGRATION ────────────────────────────
 const socket = io();
 const urlParams = new URLSearchParams(window.__DISKGAS_URL_PARAMS__ || window.location.search);
@@ -1705,6 +1732,9 @@ receiptFileInput.addEventListener('change', async (event) => {
   saveChatHistory();
 
   if (uploaded) {
+    window._receiptUploaded = true;
+    cancelReceiptReminderTimers();
+    saveChatHistory();
     if (!window._receiptTimerStarted) {
       window._receiptTimerStarted = true;
       localStorage.setItem('dg_receipt_timer', Date.now().toString());
@@ -1808,6 +1838,11 @@ function saveChatHistory() {
     boletoCopyClicked: window._boletoCopyClicked || false,
         boletoCopyReminderSent: window._boletoCopyReminderSent || false,
     boletoPaymentReminderSent: window._boletoPaymentReminderSent || false,
+    boletoGeneratedAt: window._boletoGeneratedAt || null,
+    receiptReminder1Sent: window._receiptReminder1Sent || false,
+    receiptReminder2Sent: window._receiptReminder2Sent || false,
+    receiptReminder3Sent: window._receiptReminder3Sent || false,
+    receiptUploaded: window._receiptUploaded || false,
     orderConfirmationShown: window._orderConfirmationShown || false
   };
   try {
@@ -2165,6 +2200,87 @@ async function agentSay(text, newGroup=false, immediateTyping=false) {
   addMsg(text, 'agent', newGroup); 
 }
 
+function addReceiptReminderButton() {
+  const agentBubbles = msgsEl.querySelectorAll('.row.agent .bubble.a');
+  const lastBubble = agentBubbles[agentBubbles.length - 1];
+  if (!lastBubble || lastBubble.querySelector('.receipt-reminder-btn')) return;
+
+  const btn = document.createElement('button');
+  btn.className = 'receipt-reminder-btn';
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Enviar comprovante do boleto';
+  btn.onclick = () => receiptModalOverlay.classList.add('on');
+
+  const metaEl = lastBubble.querySelector('.b-meta');
+  if (metaEl && metaEl.parentElement) metaEl.parentElement.insertBefore(btn, metaEl);
+  else lastBubble.appendChild(btn);
+}
+
+function cancelReceiptReminderTimers() {
+  Object.keys(window._receiptReminderTimers || {}).forEach((key) => {
+    const timer = window._receiptReminderTimers[key];
+    if (timer) clearTimeout(timer);
+  });
+  window._receiptReminderTimers = {};
+}
+
+async function sendReceiptReminder(reminder) {
+  if (window._paymentConfirmed || window._receiptUploaded || window[reminder.flag] || window._receiptReminderInFlight[reminder.key]) return;
+
+  window._receiptReminderInFlight[reminder.key] = true;
+  try {
+    const nome = (ORDER.nome || '').split(' ')[0] || '';
+    const saudacao = nome ? `${nome}, ` : '';
+    await agentSay(reminder.message(saudacao), true, true);
+    window[reminder.flag] = true;
+    addReceiptReminderButton();
+    saveChatHistory();
+  } finally {
+    delete window._receiptReminderInFlight[reminder.key];
+  }
+}
+
+function scheduleReceiptReminder(reminder) {
+  if (!window._boletoGeneratedAt || window._paymentConfirmed || window._receiptUploaded || window[reminder.flag]) {
+    return;
+  }
+
+  if (window._receiptReminderTimers[reminder.key]) {
+    clearTimeout(window._receiptReminderTimers[reminder.key]);
+  }
+
+  const targetTime = Number(window._boletoGeneratedAt) + reminder.delay;
+  const remaining = Math.max(0, targetTime - Date.now());
+  console.info(`[boleto] ${reminder.key} agendado para ${Math.ceil(remaining / 1000)}s`);
+
+  window._receiptReminderTimers[reminder.key] = setTimeout(async () => {
+    window._receiptReminderTimers[reminder.key] = null;
+
+    if (window._paymentConfirmed || window._receiptUploaded || window[reminder.flag]) {
+      return;
+    }
+
+    try {
+      console.info(`[boleto] enviando ${reminder.key}`);
+      await sendReceiptReminder(reminder);
+    } catch (error) {
+      console.error(`Erro ao enviar lembrete ${reminder.key}:`, error);
+      if (!window._paymentConfirmed && !window._receiptUploaded && !window[reminder.flag]) {
+        setTimeout(() => scheduleReceiptReminder(reminder), 5000);
+      }
+    }
+  }, remaining);
+}
+
+function scheduleReceiptReminders() {
+  if (!window._boletoGeneratedAt || window._paymentConfirmed || window._receiptUploaded) return;
+  console.info('[boleto] ativando lembretes a partir de', new Date(Number(window._boletoGeneratedAt)).toLocaleTimeString('pt-BR'));
+  RECEIPT_REMINDER_SCHEDULE.forEach(scheduleReceiptReminder);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') scheduleReceiptReminders();
+});
+
 async function runConversation(startStep = 0) {
   const { location } = ORDER;
   const gr = getGreeting();
@@ -2247,7 +2363,15 @@ await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vend
     addProfessionalStatusCard();
 
     window._currentFlowStep = 9;
+    window._boletoGeneratedAt = Date.now();
+    console.info('[boleto] lembretes iniciados');
+    window._receiptReminder1Sent = false;
+    window._receiptReminder2Sent = false;
+    window._receiptReminder3Sent = false;
+    window._receiptUploaded = false;
+    cancelReceiptReminderTimers();
     saveChatHistory();
+    scheduleReceiptReminders();
 
     setTimeout(() => {
       if (!window._paymentConfirmed && !document.querySelector('.payment-status-card')) {
@@ -2571,7 +2695,13 @@ function lockBackButton() {
     window._currentBoletoOrderId = state.boletoOrderId || '';
     window._currentBoletoStatus = state.boletoStatus || 'pending';
     window._boletoCopyTimer = null; window._boletoPaymentTimer = null; window._boletoCopyReminderSent = false; window._boletoPaymentReminderSent = false;
+    window._boletoGeneratedAt = state.boletoGeneratedAt || null;
+    window._receiptReminder1Sent = state.receiptReminder1Sent || false;
+    window._receiptReminder2Sent = state.receiptReminder2Sent || false;
+    window._receiptReminder3Sent = state.receiptReminder3Sent || false;
+    window._receiptUploaded = state.receiptUploaded || false;
     lastSender = state.lastSender; window._currentFlowStep = state.flowStep || 0; window._paymentConfirmed = state.paymentConfirmed || false; window._contactMsgSent = state.contactMsgSent || false; window._boletoCopyClicked = state.boletoCopyClicked || false; window._boletoCopyReminderSent = state.boletoCopyReminderSent || false; window._boletoPaymentReminderSent = state.boletoPaymentReminderSent || false;
+    if (!window._receiptUploaded && savedHTML.includes('Comprovante do boleto enviado')) window._receiptUploaded = true;
     msgsEl.innerHTML = savedHTML;
     
     msgsEl.querySelectorAll('#boletoCopyBtn').forEach(button => {
@@ -2594,6 +2724,7 @@ function lockBackButton() {
     }
     msgsEl.querySelectorAll('.intro-card, .m-avatar:not(.ghost)').forEach(el => { el.onclick = openSellerModal; });
     scrollDown(true);
+    if (window._currentFlowStep >= 9 && window._boletoGeneratedAt && !window._receiptUploaded) scheduleReceiptReminders();
     if (window._currentFlowStep < 9 && window._currentFlowStep !== 99) runConversation(window._currentFlowStep);
   } else {
     const { onReadPromise } = addMsg('Olá! Gostaria de pagar agora via boleto.','user');
