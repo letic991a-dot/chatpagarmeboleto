@@ -1360,13 +1360,22 @@ app.post('/api/chat', async (req, res) => {
     if (context) messagesForOpenAI.push({ role: 'system', content: String(context) });
     messagesForOpenAI.push({ role: 'user', content: String(message) });
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       messages: messagesForOpenAI,
       max_tokens: 150,
       temperature: 0.7
     });
 
-    const agentReply = completion.choices?.[0]?.message?.content || 'Como posso ajudar com seu pedido?';
+    const agentReply = completion.choices?.[0]?.message?.content?.trim();
+
+    if (!agentReply) {
+      console.error('A OpenAI retornou uma resposta vazia:', completion);
+      return res.status(502).json({
+        error: 'A OpenAI retornou uma resposta vazia.',
+        code: 'OPENAI_EMPTY_RESPONSE'
+      });
+    }
+
     const agentMessage = {
       userId: normalizedUserId,
       sender: 'Mateus',
@@ -1377,8 +1386,17 @@ app.post('/api/chat', async (req, res) => {
     io.to('admins').emit('new_message_for_admin', agentMessage);
     return res.json({ reply: agentReply });
   } catch (error) {
-    console.error('Erro ao chamar a API do OpenAI:', error?.response?.data || error?.message || error);
-    return res.status(500).json({ error: 'Erro ao processar sua solicitação com a IA.' });
+    console.error('Erro ao chamar a API da OpenAI:', {
+      message: error?.message,
+      code: error?.code,
+      status: error?.status,
+      response: error?.response?.data
+    });
+
+    return res.status(500).json({
+      error: error?.message || 'Erro ao processar sua solicitação com a IA.',
+      code: error?.code || 'OPENAI_REQUEST_FAILED'
+    });
   }
 });
 
