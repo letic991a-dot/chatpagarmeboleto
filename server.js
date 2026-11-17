@@ -1325,6 +1325,12 @@ app.post('/api/boleto', limitBoletoRequests, async (req, res) => {
   }
 });
 
+const configuredOpenAIModel = String(process.env.OPENAI_MODEL || '').trim();
+// Compatibilidade: se o Render ainda tiver o modelo antigo salvo, substitui automaticamente.
+const OPENAI_MODEL = configuredOpenAIModel === 'gpt-3.5-turbo'
+  ? 'gpt-4o-mini'
+  : (configuredOpenAIModel || 'gpt-4o-mini');
+
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
@@ -1360,7 +1366,7 @@ app.post('/api/chat', async (req, res) => {
     if (context) messagesForOpenAI.push({ role: 'system', content: String(context) });
     messagesForOpenAI.push({ role: 'user', content: String(message) });
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      model: OPENAI_MODEL,
       messages: messagesForOpenAI,
       max_tokens: 150,
       temperature: 0.7
