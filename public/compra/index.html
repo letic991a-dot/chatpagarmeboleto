@@ -2357,7 +2357,18 @@ PASSO ATUAL: ${currentFlowStep}
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: userMessage, context: context, currentFlowStep: currentFlowStep })
     });
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error('Erro retornado pelo servidor de IA:', data);
+      throw new Error(data.error || `Erro HTTP ${response.status}`);
+    }
+
+    if (!data.reply) {
+      console.error('Servidor não retornou data.reply:', data);
+      throw new Error('O servidor não retornou uma resposta da IA.');
+    }
+
             const msgAnalise = userMessage.toLowerCase();
     
     // Grupos para a combinação obrigatória
@@ -2373,9 +2384,10 @@ PASSO ATUAL: ${currentFlowStep}
     if (window._currentBoletoLine && !mencionaPixOuCartao && temA && temB) return 'BOLETO_PROBLEM';
 
     
-    return data.reply || 'Como posso te ajudar com seu pedido?';
-  } catch(e) {
-    return 'Tive uma instabilidade, mas sigo por aqui. Como posso ajudar?';
+    return data.reply;
+  } catch (e) {
+    console.error('Erro no atendimento por IA:', e);
+    return `Não consegui consultar a IA agora. Motivo: ${e.message || 'erro desconhecido'}`;
   }
 }
 
