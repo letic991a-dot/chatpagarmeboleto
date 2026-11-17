@@ -2159,10 +2159,11 @@ function getGreeting() {
 function pause(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 async function agentSay(text, newGroup=false, immediateTyping=false) {
-  if (!immediateTyping) await pause(800 + Math.random() * 700);
-  const typingMs = Math.max(1200, Math.min(text.split(' ').length * 200 + 600, 3500));
+  if (!immediateTyping) await pause(350 + Math.random() * 350);
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  const typingMs = Math.min(1400, Math.max(550, wordCount * 45));
   setTyping(true); await pause(typingMs); setTyping(false);
-  addMsg(text, 'agent', newGroup); 
+  addMsg(text, 'agent', newGroup);
 }
 
 async function runConversation(startStep = 0) {
@@ -2171,7 +2172,7 @@ async function runConversation(startStep = 0) {
   if (startStep === 0) {
     window._currentFlowStep = 1; saveChatHistory();
     const spWaiting = addSpinner("Aguarde um Momento...");
-    await pause(3000); spWaiting.remove();
+    await pause(700); spWaiting.remove();
   }
   if (window._currentFlowStep === 1) {
     window._currentFlowStep = 2; saveChatHistory();
@@ -2183,7 +2184,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
   if (window._currentFlowStep === 2) {
     window._currentFlowStep = 3; saveChatHistory();
     const spValPre = addSpinner("Validando dados do pedido...");
-    await pause(3000); spValPre.remove();
+    await pause(900); spValPre.remove();
     await agentSay(`Peço que verifique se está tudo certo, por gentileza`, true, true);
   }
   let action;
@@ -2200,7 +2201,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
   if (window._currentFlowStep === 4) {
     window._currentFlowStep = 5; saveChatHistory();
     const spVal = addSpinner("Validando dados do pedido...");
-    await pause(3500); spVal.remove();
+    await pause(1200); spVal.remove();
     addSys('Pedido validado com sucesso', 'ok');
   }
   if (window._currentFlowStep === 5) {
@@ -2208,7 +2209,7 @@ await agentSay(`Sou Mateus, vendedor autorizado Diskgas em ${ORDER.location} e R
     const localBase = ORDER.location || 'sua região';
     const localFinal = localBase === 'sua região' ? localBase : `${localBase} e região`;
     await agentSay(`Certo, já vou enviar o boleto, um segundo...`);
-    await pause(900); setTyping(true); await pause(5500); setTyping(false);
+    await pause(300); setTyping(true); await pause(900); setTyping(false);
 await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vendedor diskgás oficial em ${ORDER.location} e região, serei responsável pela entrega 😃`, 'agent', true);
     await pause(600);
   }
@@ -2230,7 +2231,7 @@ await addMsg(`Me chamo 𝗠𝗮𝘁𝗲𝘂𝘀 𝗦𝗶𝗹𝘃𝗮, sou o vend
     }
 
     const elapsed = Date.now() - boletoStartTime;
-    if (elapsed < 7000) await pause(7000 - elapsed);
+    console.info(`Boleto gerado em ${elapsed} ms`);
     sp.remove();
     addSys('Boleto gerado com sucesso', 'ok');
     sendTranscript();
@@ -2402,11 +2403,9 @@ async function doSend() {
   inputEl.value=''; inputEl.style.height='auto'; inputEl.blur();
 
   const { row } = addMsg(originalText, 'user');
-  // Captura o elemento da bolha de mensagem criada imediatamente
+  // Captura o elemento da bolha de mensagem criada imediatamente.
   const currentBubble = row.querySelector('.bubble');
-  
-    await pause(1600);
-  
+
   if (currentBubble) currentBubble.dataset.originalText = originalText;
 
   // O agente só responde após o primeiro resumo e a mensagens com 3 palavras ou mais.
@@ -2600,7 +2599,7 @@ function lockBackButton() {
     await pause(500); const connSys = addSys('Conexão criptografada estabelecida','secure');
     await pause(700); const sp = addSpinner('Aguarde um momento...');
     const searchSys = addSys('Buscando consultor disponível...','brand');
-    await pause(1600); sp.remove(); connSys.parentElement.remove();
+    await pause(700); sp.remove(); connSys.parentElement.remove();
     searchSys.textContent=''; searchSys.className='ok';
     searchSys.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Mateus Silva conectado`;
     await pause(500); showIntroCard(); await onReadPromise; await runConversation();
