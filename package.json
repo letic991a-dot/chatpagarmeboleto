@@ -8,7 +8,7 @@
     "check": "node --check server.js",
     "test:weekday": "node test_weekday_routing.js",
     "test": "npm run check && npm run test:weekday",
-    "build": "node minify-html.mjs"
+    "build": "vite build && node minify-html.mjs"
   },
   "keywords": [
     "boleto",
@@ -29,6 +29,8 @@
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
-    "html-minifier-terser": "^7.2.0"
+    "vite": "latest",
+    "esbuild": "latest",
+    "html-minifier-terser": "latest"
   }
 }
