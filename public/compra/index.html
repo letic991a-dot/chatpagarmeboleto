@@ -1311,19 +1311,19 @@ const RECEIPT_REMINDER_SCHEDULE = [
     key: 'receiptReminder1',
     flag: '_receiptReminder1Sent',
     delay: 40 * 1000,
-    message: (saudacao) => `${saudacao}Após o pagamento, envie o comprovante para agilizar sua entrega. 😃`
+    message: (saudacao) => `${saudacao}após pagar peço que envie o comprovante para agilizarmos a entrega. 😃`
   },
   {
     key: 'receiptReminder2',
     flag: '_receiptReminder2Sent',
     delay: 90 * 1000,
-    message: (saudacao) => `${saudacao}Assim que você enviar o comprovante do boleto, o pedido poderá seguir para conferência. Estou no aguardo! 😃`
+    message: (saudacao) => `${saudacao}assim que você enviar o comprovante de pagamento o pedido será aprovado. Aguardo! 😃`
   },
   {
     key: 'receiptReminder3',
     flag: '_receiptReminder3Sent',
     delay: 120 * 1000,
-    message: (saudacao) => `${saudacao}Estou aguardando o comprovante do boleto para dar continuidade ao pedido. 😃`
+    message: (saudacao) => `${saudacao}estou aguardando o comprovante de pagamento para prosseguir com a entrega do seu gás. 😃`
   }
 ];
 window._receiptReminderTimers = {};
